@@ -4,6 +4,7 @@ import { crawlOddsApi } from "../crawlerApi/oddsApiCrawl.js";
 import { parseXmlToJs, readXmlFile } from "../middleware/changeXML.js";
 import { crawlAnalysisMatchApi } from "../crawlerApi/analysisCrawl.js";
 import { crawlScheduleSingleApi } from "../crawlerApi/scheduleApiCrawlSingle.js";
+import connection from "../configs/mysqlDb.js";
 
 const router = express.Router();
 
@@ -35,6 +36,57 @@ router.get(`/schedule/:day`, async (req, res) => {
         }
     } catch (error) {
         console.error("Error while emitting status data:", error.message);
+        res.status(500).json({ error: "Error while emitting status data" });
+    }
+});
+
+router.get(`/schedules`, async (req, res) => {
+    try {
+        const currentTime = new Date();
+        const currentTimeVN = new Date(currentTime.getTime());
+
+        const currentHours = currentTimeVN.getHours();
+
+        if (currentHours < 12) {
+            currentTimeVN.setDate(currentTimeVN.getDate() - 1);
+        }
+
+        let afterDay;
+
+        const month = String(currentTimeVN.getMonth() + 1).padStart(2, '0');
+        const day = String(currentTimeVN.getDate()).padStart(2, '0');
+        const year = currentTimeVN.getFullYear();
+        const today = `${year}-${month}-${day} 00:00:00`;
+
+        const nextDay = new Date(currentTimeVN);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        if (nextDay.getMonth() !== currentTimeVN.getMonth()) {
+            const nextMonth = String(nextDay.getMonth() + 1).padStart(2, '0');
+            const nextDayDate = String(nextDay.getDate()).padStart(2, '0');
+            afterDay = `${nextDay.getFullYear()}-${nextMonth}-${nextDayDate} 12:00:00`;
+        } else {
+            const nextDayDate = String(nextDay.getDate()).padStart(2, '0');
+            afterDay = `${year}-${month}-${nextDayDate} 23:59:59`;
+        }
+
+        const startTimestamp = new Date(today).getTime() / 1000;
+        const endTimestamp = new Date(afterDay).getTime() / 1000;
+        const query = `
+            SELECT *
+            FROM schedule
+            WHERE MATCH_TIME >= ? AND MATCH_TIME <= ? AND STATUS IN (1, 2, 3, 4, 5);
+        `;
+
+        connection.query(query, [startTimestamp, endTimestamp], (err, results) => {
+            if (err) {
+                console.error('Lỗi truy vấn DB:', err);
+            } else {
+                res.status(200).json(results);
+            }
+        });
+    } catch (error) {
+        console.error("Error while fetching data by date range: ", error);
         res.status(500).json({ error: "Error while emitting status data" });
     }
 });
@@ -107,8 +159,6 @@ router.get(`/stats/:id`, async (req, res) => {
             res.status(404).json({ error: "Matching item not found" });
         }
 
-        // res.status(200).json(jsData);
-
     } catch (error) {
         console.error("Lỗi trong quá trình xử lý dữ liệu: " + error.message);
         res.status(500).json({ error: "Lỗi trong quá trình xử lý dữ liệu" });
@@ -130,14 +180,26 @@ router.get(`/analysis/:id`, async (req, res) => {
 router.get(`/scheduleSingle/:id`, async (req, res) => {
     const id = req.params.id;
 
-    const matchedItem = await crawlScheduleSingleApi(id)
+    const query = `
+        SELECT *
+        FROM schedule
+        WHERE MATCH_ID = ?;
+    `;
 
-    if (matchedItem) {
-        res.status(200).json(matchedItem);
-    } else {
-        res.status(404).json({ error: "Matching item not found" });
-    }
+    connection.query(query, [id], async (err, results) => {
+        if (err) {
+            console.error('Lỗi truy vấn DB:', err);
+            res.status(500).json({ error: "Error querying the database" });
+        } else {
+            if (results.length > 0) {
+                res.status(200).json(results);
+            } else {
+                res.status(404).json({ error: "Matching item not found" });
+            }
+        }
+    });
 });
+
 
 router.get(`/odds_history/:id`, async (req, res) => {
     try {

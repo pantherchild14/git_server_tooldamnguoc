@@ -30,7 +30,6 @@ const getOddsChangeXML = async () => {
     }
 };
 
-
 const saveDataToXml = async () => {
     try {
         const filePath = "./data_xml/schedule_data.xml";

@@ -8,11 +8,10 @@ import apiRouter from './routers/apiRouter.js';
 import usersRouter from './routers/usersRouter.js';
 import { scheduleCron } from './crons/scheduleCron.js';
 import { createWebSocketServer } from './middleware/createWebSocketServer.js';
-import { xml_odds, xml_odds_history, xml_statistics_match } from './middleware/xmlMiddleware.js';
+import { getScheduleday1 } from './controllers/scheduleController.js';
+import { xml_schedule } from './middleware/xmlMiddleware.js';
 
 dotenv.config();
-
-
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,6 +31,3 @@ server.listen(PORT, () => {
 });
 
 scheduleCron();
-// xml_odds_history();
-// xml_odds();
-// xml_statistics_match();

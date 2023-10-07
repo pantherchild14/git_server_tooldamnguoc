@@ -29,20 +29,32 @@ const createWebSocketServer = (server) => {
     };
 
 
-    const emitSchedule = async (socket) => {
-        try {
 
-            const filePath = "./data_xml/schedule_data.xml";
-            const xmlData = await readXmlFile(filePath);
-            const jsData = await parseXmlToJs(xmlData);
-            socket.emit("SCHEDULE", JSON.stringify(jsData));
-        } catch (error) {
-            console.error("Error fetching schedule data:", error.message);
-            socket.emit("ERROR", "An error occurred while fetching schedule data.");
-            if (error.message.includes("ETIMEDOUT")) {
-                setTimeout(async () => await emitSchedule(socket), 5000);
+    let isFetchingSchedule = false;
+    const emitSchedule = async (socket) => {
+        const fetchDataAndEmit = async () => {
+            if (!isFetchingSchedule) {
+                try {
+                    isFetchingSchedule = true;
+                    await xml_schedule();
+
+                    const filePath = "./data_xml/schedule_data.xml";
+                    const xmlData = await readXmlFile(filePath);
+                    const jsData = await parseXmlToJs(xmlData);
+                    socket.emit("SCHEDULE", JSON.stringify(jsData));
+                } catch (error) {
+                    console.error("Error fetching schedule data:", error.message);
+                    socket.emit("ERROR", "An error occurred while fetching schedule data.");
+                    if (error.message.includes("ETIMEDOUT")) {
+                        setTimeout(async () => await emitSchedule(socket), 5000);
+                    }
+                } finally {
+                    isFetchingSchedule = false;
+                }
             }
         }
+        fetchDataAndEmit();
+
     };
 
 
