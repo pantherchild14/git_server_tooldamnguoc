@@ -3,6 +3,7 @@ import { format } from 'date-fns-tz';
 
 import { parseXmlToJs, readXmlFile } from "../middleware/changeXML.js";
 import connection from "../configs/mysqlDb.js";
+import { crawlOddsChangeAllApi } from "../crawlerApi/oddsChangeAllApiCrawl.js";
 
 
 // const getOdds = async () => {
@@ -163,17 +164,14 @@ import connection from "../configs/mysqlDb.js";
 
 const getOdds = async () => {
     try {
-        const filePath = "./data_xml/odds_change_data.xml";
-        const xmlData = await readXmlFile(filePath);
-        const jsData = await parseXmlToJs(xmlData);
+        const data = await crawlOddsChangeAllApi();
+        const oddsItem = Array.isArray(data) ? data : [data];
 
-        const oddsItem = jsData.ODDS_DATA.ODDS_ITEM;
 
         oddsItem.forEach(async (item) => {
-            if (item?.$?.handicap) {
-                const handicapData = JSON.parse(item.$.handicap);
+            if (item?.handicap) {
+                const handicapData = JSON.parse(item.handicap);
                 const CHANGETIME_HANDICAP = handicapData.CHANGE_TIME;
-
                 // Kiểm tra và thêm dữ liệu vào bảng handicap
                 const checkQueryHandicap = `
                     SELECT COUNT(*) as count
@@ -216,8 +214,8 @@ const getOdds = async () => {
                 });
             }
 
-            if (item?.$?.europe) {
-                const europeData = JSON.parse(item.$.europe);
+            if (item?.europe) {
+                const europeData = JSON.parse(item.europe);
                 const CHANGETIME_EUROPE = europeData.CHANGE_TIME;
                 // Kiểm tra và thêm dữ liệu vào bảng europe
                 const checkQueryEurope = `
@@ -257,8 +255,8 @@ const getOdds = async () => {
                 });
             }
 
-            if (item?.$?.overUnder) {
-                const overunderData = JSON.parse(item.$.overUnder);
+            if (item?.overUnder) {
+                const overunderData = JSON.parse(item.overUnder);
                 const CHANGETIME_OVERUNDER = overunderData.CHANGE_TIME;
                 // Kiểm tra và thêm dữ liệu vào bảng europe
                 const checkQueryOverUnder = `
@@ -300,7 +298,7 @@ const getOdds = async () => {
 
         });
 
-        console.log("Hoàn thành cập nhật dữ liệu");
+        console.log("Hoàn thành cập nhật dữ liệu Odd change All");
     } catch (error) {
         console.error("Error while fetching odds data: ", error);
         return Promise.resolve([]);

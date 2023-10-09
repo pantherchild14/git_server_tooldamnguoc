@@ -8,7 +8,6 @@ import apiRouter from './routers/apiRouter.js';
 import usersRouter from './routers/usersRouter.js';
 import { scheduleCron } from './crons/scheduleCron.js';
 import { createWebSocketServer } from './middleware/createWebSocketServer.js';
-import { getScheduleday1 } from './controllers/scheduleController.js';
 import { xml_schedule } from './middleware/xmlMiddleware.js';
 
 dotenv.config();
@@ -33,4 +32,6 @@ server.listen(PORT, () => {
 scheduleCron();
 
 
-// xml_schedule
+// xml_schedule3Day();
+
+// xml_schedule();
